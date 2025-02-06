@@ -9,31 +9,36 @@
 #include "inc/font.h"
 #include "ws2812.pio.h"
 
+// Definições
 #define I2C_PORT i2c1
 #define I2C_SDA 14
 #define I2C_SCL 15
 #define endereco 0x3C
 
-#define led_pin_g 11  // LED Verde
-#define led_pin_b 12  // LED Azul
-#define led_pin_r 13  // LED Vermelho (não utilizado)
+#define led_pin_g 11
+#define led_pin_b 12
+#define led_pin_r 13
 
-#define button_a_pin 5  // Botão A
-#define button_b_pin 6  // Botão B
+#define button_a_pin 5
+#define button_b_pin 6
 
 #define WS2812_PIN 7
 #define NUM_PIXELS 25
 #define IS_RGBW false
 
-volatile bool led_green_state = false; // Estado do LED Verde
-volatile bool led_blue_state = false;  // Estado do LED Azul
-volatile int current_number = -1;      // Número atual exibido na matriz WS2812
+void update_display();
 
-// Variáveis para debouncing
+// Variáveis globais
+volatile bool led_green_state = false;
+volatile bool led_blue_state = false;
+volatile int current_number = -1;
+
 volatile uint32_t last_time_a = 0;
 volatile uint32_t last_time_b = 0;
 
-// Buffer para números na matriz (exemplo: 0 a 9)
+ssd1306_t ssd; // Variável para o display SSD1306
+
+// Matriz de números
 bool numbers[10][NUM_PIXELS] = {
     // Número 00
     { 
@@ -118,7 +123,7 @@ bool numbers[10][NUM_PIXELS] = {
  
 };
 
-// Funções auxiliares (mesmo do código anterior)
+// Funções auxiliares
 static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
     return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
 }
@@ -132,56 +137,78 @@ uint32_t ajustarBrilho(uint8_t r, uint8_t g, uint8_t b, float fator) {
 }
 
 void display_number(int number) {
-    float brilho = 0.1; // Reduz brilho para 10%
-    uint32_t color = ajustarBrilho(148, 0, 211, brilho); // roxo com brilho reduzido
-    
+    float brilho = 0.1;
+    uint32_t color = ajustarBrilho(148, 0, 211, brilho);
     for (int i = 0; i < NUM_PIXELS; i++) {
         put_pixel(numbers[number][i] ? color : 0);
     }
 }
 
-// Função de interrupção única para os botões A e B
 void gpio_irq_handler(uint gpio, uint32_t events) {
     uint32_t current_time = to_us_since_boot(get_absolute_time());
 
-    if (gpio == button_a_pin && current_time - last_time_a > 400000) { // Debouncing
+    if (gpio == button_a_pin && current_time - last_time_a > 400000) {
         last_time_a = current_time;
-        led_green_state = !led_green_state; // Alterna o estado do LED Verde
+        led_green_state = !led_green_state;
         gpio_put(led_pin_g, led_green_state);
         printf("Botão A pressionado. LED Verde: %s\n", led_green_state ? "Ligado" : "Desligado");
+        update_display(); // Atualiza o display após pressionar o botão A
     }
 
-    if (gpio == button_b_pin && current_time - last_time_b > 400000) { // Debouncing
+    if (gpio == button_b_pin && current_time - last_time_b > 400000) {
         last_time_b = current_time;
-        led_blue_state = !led_blue_state; // Alterna o estado do LED Azul
+        led_blue_state = !led_blue_state;
         gpio_put(led_pin_b, led_blue_state);
         printf("Botão B pressionado. LED Azul: %s\n", led_blue_state ? "Ligado" : "Desligado");
+        update_display(); // Atualiza o display após pressionar o botão B
     }
 }
 
 void display_message(ssd1306_t *ssd, const char *message) {
-    ssd1306_fill(ssd, false); // Limpa o display
-    ssd1306_draw_string(ssd, message, 10, 30); // Desenha a mensagem
-    ssd1306_send_data(ssd); // Atualiza o display
+    ssd1306_fill(ssd, false);
+    ssd1306_draw_string(ssd, message, 10, 30);
+    ssd1306_send_data(ssd);
 }
 
-int main() {
-    stdio_init_all(); // Inicializa comunicação USB CDC para monitor serial
+// Função para atualizar o display com os estados dos LEDs e o número atual
+void update_display() {
+    char message_green[20];
+    char message_blue[20];
 
-    // Configura os pinos dos LEDs como saída
+    sprintf(message_green, "Verde: %s", led_green_state ? "Ligado" : "Desligado");
+    sprintf(message_blue, "LED AZUL %s", led_blue_state ? "ACESSO" : "APAGADO");
+
+    ssd1306_fill(&ssd, false);
+    ssd1306_draw_string(&ssd, message_green, 10, 10); // Linha superior
+    ssd1306_draw_string(&ssd, message_blue, 10, 30);  // Linha inferior
+    ssd1306_send_data(&ssd);
+
+    if (current_number != -1) {
+        char num_str[3];
+        sprintf(num_str, "%d", current_number);
+        ssd1306_draw_string(&ssd, num_str, 10, 50);
+        ssd1306_send_data(&ssd);
+    }
+}
+
+
+int main() {
+    stdio_init_all();
+
+    // Inicialização dos LEDs
     gpio_init(led_pin_r);
     gpio_set_dir(led_pin_r, GPIO_OUT);
-    gpio_put(led_pin_r, 0); // Inicialmente desligado
+    gpio_put(led_pin_r, 0);
 
     gpio_init(led_pin_g);
     gpio_set_dir(led_pin_g, GPIO_OUT);
-    gpio_put(led_pin_g, 0); // Inicialmente desligado
+    gpio_put(led_pin_g, 0);
 
     gpio_init(led_pin_b);
     gpio_set_dir(led_pin_b, GPIO_OUT);
-    gpio_put(led_pin_b, 0); // Inicialmente desligado
+    gpio_put(led_pin_b, 0);
 
-    // Configura os pinos dos botões como entrada
+    // Inicialização dos botões
     gpio_init(button_a_pin);
     gpio_set_dir(button_a_pin, GPIO_IN);
     gpio_pull_up(button_a_pin);
@@ -190,70 +217,49 @@ int main() {
     gpio_set_dir(button_b_pin, GPIO_IN);
     gpio_pull_up(button_b_pin);
 
-    // Configura interrupções para os botões
+    // Configuração das interrupções
     gpio_set_irq_enabled(button_a_pin, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(button_b_pin, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_callback(&gpio_irq_handler);
     irq_set_enabled(IO_IRQ_BANK0, true);
 
-    // Inicialização da matriz WS2812
+    // Inicialização do WS2812
     PIO pio = pio0;
     int sm = 0;
     uint offset = pio_add_program(pio, &ws2812_program);
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
 
-    // I2C Initialisation. Using it at 400Khz.
+    // Inicialização do I2C e display SSD1306
     i2c_init(I2C_PORT, 400 * 1000);
+    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA);
+    gpio_pull_up(I2C_SCL);
 
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C); // Set the GPIO pin function to I2C
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C); // Set the GPIO pin function to I2C
-    gpio_pull_up(I2C_SDA); // Pull up the data line
-    gpio_pull_up(I2C_SCL); // Pull up the clock line
-
-    ssd1306_t ssd; // Inicializa a estrutura do display
-    ssd1306_init(&ssd, WIDTH, HEIGHT, false, endereco, I2C_PORT); // Inicializa o display
-    ssd1306_config(&ssd); // Configura o display
-    ssd1306_send_data(&ssd); // Envia os dados para o display
-
-    // Limpa o display. O display inicia com todos os pixels apagados.
+    ssd1306_init(&ssd, WIDTH, HEIGHT, false, endereco, I2C_PORT);
+    ssd1306_config(&ssd);
+    ssd1306_send_data(&ssd);
     ssd1306_fill(&ssd, false);
     ssd1306_send_data(&ssd);
 
-    printf("RP2040 inicializado. Envie caracteres ou números (0-9) para interagir.\n");
+    printf("RP2040 inicializado.\n");
+
+    update_display(); // Exibe mensagem inicial no display
 
     while (true) {
-        if (stdio_usb_connected()) { // Certifica-se de que o USB está conectado
+        if (stdio_usb_connected()) {
             char c;
-            if (scanf("%c", &c) == 1) { // Lê caractere da entrada padrão
-                printf("Número selecionado: '%c'\n", c);
+            if (scanf("%c", &c) == 1) {
+                printf("Caractere recebido: '%c'\n", c);
 
-                // Exibe o caractere no display
-                char message[2] = {c, '\0'};
-                display_message(&ssd, message);
-
-                // Verifica se o caractere é um número entre 0 e 9
                 if (c >= '0' && c <= '9') {
                     current_number = c - '0';
                     display_number(current_number);
+                    update_display(); // Atualiza o display com o novo número
                 }
             }
         }
 
-        // Atualiza o display com o estado dos LEDs
-        if (led_green_state) {
-            display_message(&ssd, "TUDO CERTO1");
-        } else {
-            display_message(&ssd, "TUDO CERTO2");
-        }
-
-        if (led_blue_state) {
-            display_message(&ssd, "TUDO CERTO3");
-        } else {
-            display_message(&ssd, "TUDO CERTO4");
-        }
-
         sleep_ms(40);
     }
-
-    return 0;
 }
