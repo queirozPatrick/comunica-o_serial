@@ -139,7 +139,7 @@ uint32_t ajustarBrilho(uint8_t r, uint8_t g, uint8_t b, float fator) {
 
 void display_number(int number) {
     float brilho = 0.1;
-    uint32_t color = ajustarBrilho(148, 0, 211, brilho);
+    uint32_t color = ajustarBrilho(0,255,255, brilho);
     for (int i = 0; i < NUM_PIXELS; i++) {
         put_pixel(numbers[number][i] ? color : 0);
     }
