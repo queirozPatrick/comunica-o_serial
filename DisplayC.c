@@ -190,11 +190,11 @@ void update_display() {
     } else {
         // Caso contrário, exibe o status do último LED alterado
         if (!last_led_changed) { // LED verde foi alterado por último
-            sprintf(message, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
+            sprintf(message, "Led Verde: %s", led_green_state ? ">>>>>>Ligado" : ">>>>Desligado");
         } else { // LED azul foi alterado por último
-            sprintf(message, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
+            sprintf(message, "Led Azul: %s", led_blue_state ? ">>>>>>Ligado" : ">>>>\nDesligado");
         }
-        ssd1306_draw_string(&ssd, message, 10, 30); // Centralizado
+        ssd1306_draw_string(&ssd, message, 35, 30); // Centralizado
     }
 
     ssd1306_send_data(&ssd);
