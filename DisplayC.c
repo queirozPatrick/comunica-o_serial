@@ -175,20 +175,29 @@ void update_display() {
     char message_green[20];
     char message_blue[20];
 
-    sprintf(message_green, "Verde: %s", led_green_state ? "Ligado" : "Desligado");
-    sprintf(message_blue, "LED AZUL %s", led_blue_state ? "ACESSO" : "APAGADO");
-
+    // Limpa o display antes de atualizar
     ssd1306_fill(&ssd, false);
-    ssd1306_draw_string(&ssd, message_green, 10, 10); // Linha superior
-    ssd1306_draw_string(&ssd, message_blue, 10, 30);  // Linha inferior
-    ssd1306_send_data(&ssd);
 
+    // Atualiza a mensagem para o LED verde se o botão A for pressionado
+    if (led_green_state) {
+        sprintf(message_green, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
+        ssd1306_draw_string(&ssd, message_green, 10, 10); // Linha superior
+    }
+
+    // Atualiza a mensagem para o LED azul se o botão B for pressionado
+    if (led_blue_state) {
+        sprintf(message_blue, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
+        ssd1306_draw_string(&ssd, message_blue, 10, 30);  // Linha inferior
+    }
+
+    // Se houver um número atual, exibe-o
     if (current_number != -1) {
         char num_str[3];
         sprintf(num_str, "%d", current_number);
         ssd1306_draw_string(&ssd, num_str, 10, 50);
-        ssd1306_send_data(&ssd);
     }
+
+    ssd1306_send_data(&ssd);
 }
 
 
