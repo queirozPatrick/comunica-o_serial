@@ -241,15 +241,15 @@ int main() {
 
         // Atualiza o display com o estado dos LEDs
         if (led_green_state) {
-            display_message(&ssd, "LED VERDE LIGADO");
+            display_message(&ssd, "TUDO CERTO1");
         } else {
-            display_message(&ssd, "LED VERDE DESLIGADO");
+            display_message(&ssd, "TUDO CERTO2");
         }
 
         if (led_blue_state) {
-            display_message(&ssd, "LED AZUL LIGADO");
+            display_message(&ssd, "TUDO CERTO3");
         } else {
-            display_message(&ssd, "LED AZUL DESLIGADO");
+            display_message(&ssd, "TUDO CERTO4");
         }
 
         sleep_ms(40);
