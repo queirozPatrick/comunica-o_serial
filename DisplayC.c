@@ -153,6 +153,7 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         led_green_state = !led_green_state;
         gpio_put(led_pin_g, led_green_state);
         last_led_changed = false; // LED verde foi alterado
+        current_number = -1; // Reseta o número atual
         printf("Botão A pressionado. LED Verde: %s\n", led_green_state ? "Ligado" : "Desligado");
         update_display(); // Atualiza o display após pressionar o botão A
     }
@@ -162,6 +163,7 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         led_blue_state = !led_blue_state;
         gpio_put(led_pin_b, led_blue_state);
         last_led_changed = true; // LED azul foi alterado
+        current_number = -1; // Reseta o número atual
         printf("Botão B pressionado. LED Azul: %s\n", led_blue_state ? "Ligado" : "Desligado");
         update_display(); // Atualiza o display após pressionar o botão B
     }
@@ -180,21 +182,19 @@ void update_display() {
     // Limpa o display antes de atualizar
     ssd1306_fill(&ssd, false);
 
-    // Verifica qual LED foi alterado por último e exibe sua mensagem
-    if (!last_led_changed) { // LED verde foi alterado por último
-        sprintf(message, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
-    } else { // LED azul foi alterado por último
-        sprintf(message, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
-    }
-
-    // Centraliza a mensagem no display
-    ssd1306_draw_string(&ssd, message, 10, 30); // Ajuste a posição conforme necessário
-
-    // Se houver um número atual, exibe-o
+    // Se houver um número atual, exibe-o e ignora o status dos LEDs
     if (current_number != -1) {
         char num_str[3];
         sprintf(num_str, "%d", current_number);
         ssd1306_draw_string(&ssd, num_str, 60, 30); // Centralizado
+    } else {
+        // Caso contrário, exibe o status do último LED alterado
+        if (!last_led_changed) { // LED verde foi alterado por último
+            sprintf(message, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
+        } else { // LED azul foi alterado por último
+            sprintf(message, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
+        }
+        ssd1306_draw_string(&ssd, message, 10, 30); // Centralizado
     }
 
     ssd1306_send_data(&ssd);
@@ -260,15 +260,18 @@ int main() {
             char c;
             if (scanf("%c", &c) == 1) {
                 printf("Caractere recebido: '%c'\n", c);
-
+    
                 if (c >= '0' && c <= '9') {
-                    current_number = c - '0';
-                    display_number(current_number);
-                    update_display(); // Atualiza o display com o novo número
+                    current_number = c - '0'; // Converte o caractere para número
+                    display_number(current_number); // Atualiza a matriz de LED com o número
+                    update_display(); // Atualiza o display OLED com o número
+                } else if (c == 'c' || c == 'C') { // Limpar o número e voltar a exibir o status dos LEDs
+                    current_number = -1; // Reseta o número atual
+                    update_display(); // Atualiza o display OLED com o status dos LEDs
                 }
             }
         }
-
+    
         sleep_ms(40);
     }
 }
