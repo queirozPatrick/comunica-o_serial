@@ -35,6 +35,7 @@ volatile int current_number = -1;
 
 volatile uint32_t last_time_a = 0;
 volatile uint32_t last_time_b = 0;
+volatile bool last_led_changed = false; // false = LED verde, true = LED azul
 
 ssd1306_t ssd; // Variável para o display SSD1306
 
@@ -151,6 +152,7 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         last_time_a = current_time;
         led_green_state = !led_green_state;
         gpio_put(led_pin_g, led_green_state);
+        last_led_changed = false; // LED verde foi alterado
         printf("Botão A pressionado. LED Verde: %s\n", led_green_state ? "Ligado" : "Desligado");
         update_display(); // Atualiza o display após pressionar o botão A
     }
@@ -159,6 +161,7 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         last_time_b = current_time;
         led_blue_state = !led_blue_state;
         gpio_put(led_pin_b, led_blue_state);
+        last_led_changed = true; // LED azul foi alterado
         printf("Botão B pressionado. LED Azul: %s\n", led_blue_state ? "Ligado" : "Desligado");
         update_display(); // Atualiza o display após pressionar o botão B
     }
@@ -172,29 +175,26 @@ void display_message(ssd1306_t *ssd, const char *message) {
 
 // Função para atualizar o display com os estados dos LEDs e o número atual
 void update_display() {
-    char message_green[20];
-    char message_blue[20];
+    char message[20]; // Buffer para armazenar a mensagem
 
     // Limpa o display antes de atualizar
     ssd1306_fill(&ssd, false);
 
-    // Atualiza a mensagem para o LED verde se o botão A for pressionado
-    if (led_green_state) {
-        sprintf(message_green, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
-        ssd1306_draw_string(&ssd, message_green, 10, 10); // Linha superior
+    // Verifica qual LED foi alterado por último e exibe sua mensagem
+    if (!last_led_changed) { // LED verde foi alterado por último
+        sprintf(message, "Led Verde: %s", led_green_state ? "Ligado" : "Desligado");
+    } else { // LED azul foi alterado por último
+        sprintf(message, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
     }
 
-    // Atualiza a mensagem para o LED azul se o botão B for pressionado
-    if (led_blue_state) {
-        sprintf(message_blue, "Led Azul: %s", led_blue_state ? "Ligado" : "Desligado");
-        ssd1306_draw_string(&ssd, message_blue, 10, 30);  // Linha inferior
-    }
+    // Centraliza a mensagem no display
+    ssd1306_draw_string(&ssd, message, 10, 30); // Ajuste a posição conforme necessário
 
     // Se houver um número atual, exibe-o
     if (current_number != -1) {
         char num_str[3];
         sprintf(num_str, "%d", current_number);
-        ssd1306_draw_string(&ssd, num_str, 10, 50);
+        ssd1306_draw_string(&ssd, num_str, 60, 30); // Centralizado
     }
 
     ssd1306_send_data(&ssd);
