@@ -154,6 +154,7 @@ void ssd1306_vline(ssd1306_t *ssd, uint8_t x, uint8_t y0, uint8_t y1, bool value
 }
 
 void ssd1306_draw_char(ssd1306_t *ssd, char c, uint8_t x, uint8_t y) {
+  // Lógica alterada para aceitar caracteres de A-Z, a-z e 0-9
   uint16_t index = 0;
 
   if (c >= 'A' && c <= 'Z') {
