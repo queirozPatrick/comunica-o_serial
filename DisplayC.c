@@ -10,36 +10,37 @@
 #include "ws2812.pio.h"
 
 // Definições
-#define I2C_PORT i2c1
-#define I2C_SDA 14
-#define I2C_SCL 15
-#define endereco 0x3C
+#define I2C_PORT i2c1 // Porta I2C utilizada
+#define I2C_SDA 14 // Pino SDA (dados) do I2C
+#define I2C_SCL 15 // Pino SCL (clock) do I2C
+#define endereco 0x3C // Endereço do display OLED
 
-#define led_pin_g 11
-#define led_pin_b 12
-#define led_pin_r 13
+#define led_pin_g 11 // LED verde
+#define led_pin_b 12 // LED azul
+#define led_pin_r 13 // LED verelho
 
-#define button_a_pin 5
-#define button_b_pin 6
+#define button_a_pin 5 // botão A
+#define button_b_pin 6 // botão B
 
-#define WS2812_PIN 7
-#define NUM_PIXELS 25
-#define IS_RGBW false
+#define WS2812_PIN 7 // Pino do LED WS2812
+#define NUM_PIXELS 25 // Número de LEDs na matriz
+#define IS_RGBW false // Define se o LED é RGBW (falso para RGB)
 
+// Atualiza o display
 void update_display();
 
 // Variáveis globais
-volatile bool led_green_state = false;
-volatile bool led_blue_state = false;
-volatile int current_number = -1;
+volatile bool led_green_state = false; // Estado do LED verde
+volatile bool led_blue_state = false; // Estado do LED azul
+volatile int current_number = -1; // Número atual exibido (-1 significa nenhum número)
 
 volatile uint32_t last_time_a = 0;
 volatile uint32_t last_time_b = 0;
 volatile bool last_led_changed = false; // false = LED verde, true = LED azul
 
-ssd1306_t ssd; // Variável para o display SSD1306
+ssd1306_t ssd; // Variável para controlar o display SSD1306
 
-// Matriz de números
+// Matriz de números dos LEDs
 bool numbers[10][NUM_PIXELS] = {
     // Número 00
     { 
@@ -130,49 +131,46 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 static inline void put_pixel(uint32_t pixel_grb) {
+    // Envia um valor de pixel para o LED WS2812
     pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
 }
 
-uint32_t ajustarBrilho(uint8_t r, uint8_t g, uint8_t b, float fator) {
+uint32_t ajustarBrilho(uint8_t r, uint8_t g, uint8_t b, float fator) { // Ajusta o brilho de uma cor RGB
     return urgb_u32((uint8_t)(r * fator), (uint8_t)(g * fator), (uint8_t)(b * fator));
 }
 
 void display_number(int number) {
+    // Exibe o número na matriz de LEDs
     float brilho = 0.1;
-    uint32_t color = ajustarBrilho(0,255,255, brilho);
+    uint32_t color = ajustarBrilho(0,255,255, brilho); // Cor ciano
     for (int i = 0; i < NUM_PIXELS; i++) {
-        put_pixel(numbers[number][i] ? color : 0);
+        put_pixel(numbers[number][i] ? color : 0); // Liga ou desliga o LED
     }
 }
 
 void gpio_irq_handler(uint gpio, uint32_t events) {
+    // Manipula as interrupções dos botões
     uint32_t current_time = to_us_since_boot(get_absolute_time());
 
     if (gpio == button_a_pin && current_time - last_time_a > 400000) {
         last_time_a = current_time;
-        led_green_state = !led_green_state;
+        led_green_state = !led_green_state; // Alterna o estado do LED verde
         gpio_put(led_pin_g, led_green_state);
         last_led_changed = false; // LED verde foi alterado
         current_number = -1; // Reseta o número atual
         printf("Botão A pressionado. LED Verde: %s\n", led_green_state ? "Ligado" : "Desligado");
-        update_display(); // Atualiza o display após pressionar o botão A
+        update_display(); // Atualiza o display
     }
 
     if (gpio == button_b_pin && current_time - last_time_b > 400000) {
         last_time_b = current_time;
-        led_blue_state = !led_blue_state;
+        led_blue_state = !led_blue_state; // Alterna o estado do LED azul
         gpio_put(led_pin_b, led_blue_state);
         last_led_changed = true; // LED azul foi alterado
         current_number = -1; // Reseta o número atual
         printf("Botão B pressionado. LED Azul: %s\n", led_blue_state ? "Ligado" : "Desligado");
         update_display(); // Atualiza o display após pressionar o botão B
     }
-}
-
-void display_message(ssd1306_t *ssd, const char *message) {
-    ssd1306_fill(ssd, false);
-    ssd1306_draw_string(ssd, message, 10, 30);
-    ssd1306_send_data(ssd);
 }
 
 // Função para atualizar o display com os estados dos LEDs e o número atual
@@ -197,14 +195,14 @@ void update_display() {
         ssd1306_draw_string(&ssd, message, 35, 30); // Centralizado
     }
 
-    ssd1306_send_data(&ssd);
+    ssd1306_send_data(&ssd); // Envia os dados para o display
 }
 
-
+    // Função principal
 int main() {
-    stdio_init_all();
+    stdio_init_all(); // Inicializa a comunicação serial
 
-    // Inicialização dos LEDs
+    // Inicializa os LEDs
     gpio_init(led_pin_r);
     gpio_set_dir(led_pin_r, GPIO_OUT);
     gpio_put(led_pin_r, 0);
@@ -217,7 +215,7 @@ int main() {
     gpio_set_dir(led_pin_b, GPIO_OUT);
     gpio_put(led_pin_b, 0);
 
-    // Inicialização dos botões
+    // Inicializa os botões
     gpio_init(button_a_pin);
     gpio_set_dir(button_a_pin, GPIO_IN);
     gpio_pull_up(button_a_pin);
@@ -272,6 +270,6 @@ int main() {
             }
         }
     
-        sleep_ms(40);
+        sleep_ms(40); // Delay para evitar uso excessivo da CPU
     }
 }
