@@ -180,7 +180,7 @@ void update_display() {
     // Limpa o display antes de atualizar
     ssd1306_fill(&ssd, false);
 
-    // Se houver um número atual, exibe-o e ignora o status dos LEDs
+    // Se houver um número atual, exibe e ignora o status dos LEDs
     if (current_number != -1) {
         char num_str[3];
         sprintf(num_str, "%d", current_number);
@@ -263,9 +263,13 @@ int main() {
                     current_number = c - '0'; // Converte o caractere para número
                     display_number(current_number); // Atualiza a matriz de LED com o número
                     update_display(); // Atualiza o display OLED com o número
-                } else if (c == 'c' || c == 'C') { // Limpar o número e voltar a exibir o status dos LEDs
+                } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                    // Exibe o caractere no display OLED
                     current_number = -1; // Reseta o número atual
-                    update_display(); // Atualiza o display OLED com o status dos LEDs
+                    ssd1306_fill(&ssd, false); // Limpa o display
+                    char str[2] = {c, '\0'}; // Converte o caractere para uma string
+                    ssd1306_draw_string(&ssd, str, 60, 30); // Exibe o caractere no centro do display
+                    ssd1306_send_data(&ssd); // Envia os dados para o display
                 }
             }
         }
