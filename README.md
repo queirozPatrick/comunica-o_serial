@@ -112,7 +112,7 @@ O objetivo é criar um sistema que combine hardware e software para:
 
 ## 🎥 Vídeo de Demonstração
 
-[Link para o vídeo no YouTube ou Google Drive](À ser add)
+[Vídeo do projeto no Youtube](https://youtu.be/_VTQN-bJMxo)
 
 ---
 
